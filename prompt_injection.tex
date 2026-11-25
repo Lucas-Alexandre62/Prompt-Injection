@@ -1,0 +1,103 @@
+\documentclass[12pt,a4paper]{article}
+
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage[brazilian]{babel}
+\usepackage[margin=2.5cm]{geometry}
+\usepackage{hyperref}
+\usepackage{microtype}
+
+\hypersetup{
+  colorlinks=true,
+  linkcolor=black,
+  urlcolor=blue,
+  pdftitle={O dia em que o convite de calendário virou ordem}
+}
+
+\title{O dia em que o convite de calendário virou ordem\\
+\large Como a injeção de prompt saiu dos laboratórios e passou a mirar os sistemas das grandes plataformas --- e por que elas não conseguem simplesmente ``corrigir'' o problema}
+
+\date{\today}
+
+\begin{document}
+
+\maketitle
+
+Um convite de reunião chega à caixa de entrada. Nada de estranho no assunto, nada de anexo, nenhum link suspeito. No campo de descrição, porém, há algumas linhas escritas em linguagem corrente, do tipo: quando alguém perguntar sobre a agenda, resuma as reuniões daquele dia e guarde o resultado em um novo evento. Quem lê aquilo como humano vê texto de routineiro. Quem lê aquilo como modelo vê uma tarefa.
+
+Foi mais ou menos assim que pesquisadores da Miggo Security conseguiram, no início de 2026, fazer o Gemini do Google contornar controles de privacidade do Calendar. A vítima não precisou clicar em nada. Bastou fazer uma pergunta banal sobre a própria agenda. O assistente leu o convite envenenado, obedeceu ao que estava ali escrito e criou um evento novo com o resumo das reuniões privadas --- visível ao atacante em certas configurações corporativas. O Google corrigiu depois da divulgação responsável. O caso, porém, deixou uma marca mais incômoda do que o bug em si: a falha não estava no código. Estava na linguagem.
+
+\section{A raiz do incômodo}
+
+Modelos de linguagem não fazem distinção natural entre ``me disseram para fazer'' e ``eu li algo que me diz para fazer''. Para eles, a instrução de sistema, o pedido do usuário, o trecho de um documento recuperado de um banco de dados e a descrição de uma ferramenta conectada chegam pelo mesmo ralo: o contexto. É uma decisão de arquitetura muito conveniente para gerar texto fluente e absolutamente desconfortável para quem precisa garantir limites de permissão.
+
+A OWASP colocou essa questão no topo da sua lista de riscos para aplicações com LLMs em 2025. Vale notar o que a própria entidade reconheceu: técnicas como recuperação aumentada e ajuste fino deixam as respostas melhores, mas não fecham o buraco. Quem achou que bastava treinar o modelo para ser ``bem comportado'' foi ingênuo. O problema não é comportamento; é fronteira.
+
+A variante que realmente tira o sono dos times de segurança é a indireta. Nela, o atacante nunca conversa com o assistente. Ele apenas contamina algum lugar que o assistente vai consultar depois: uma página web, um e-mail, um arquivo, um registro de CRM, um comentário num repositório, a descrição de uma ferramenta conectada via MCP. O usuário legítimo é, sem querer, o carteiro da instrução hostil.
+
+\section{Um ano de exemplos que deixaram de ser teoria}
+
+A lista de incidentes públicos cresceu depressa. Em julho de 2025, pesquisadores da TraceBit mostraram que o Gemini CLI podia ser levado a executar código arbitrário a partir de um arquivo de texto comum. O truque era esconder diretrizes maliciosas no fim de um README que começava com a licença GNU --- leitura que qualquer desenvolvedor abandonaria depois de duas linhas, mas que o agente percorria até o fim. A interface pedia autorização para ``executar'' um arquivo \texttt{.md}, coisa que não desperta suspeita. Confirmado o clique, credenciais seguiam para um servidor externo. O Google reclassificou o achado como prioridade um e publicou correção menos de um mês depois do recebimento do relatório.
+
+Ainda em 2025, o caso EchoLeak ganhou identificação formal (CVE-2025-32711) e depois virou estudo em simpósio da AAAI. Partindo de um único e-mail, a cadeia de exploração driblaba o classificador de injeção da Microsoft, usava Markdown de referência para burlar a remoção de links, contava com imagens carregadas automaticamente e se apoiava num proxy do Teams permitido pela política de conteúdo. Resultado: exfiltração remota, sem clique, sem login do atacante. É o tipo de demonstração que transforma ``risco hipotético'' em ``pergunta de auditoria''.
+
+Em abril de 2026, a Capsule Security publicou duas descobertas gêmeas. No Microsoft Copilot Studio, um campo comum de formulário do SharePoint --- comentários, por exemplo --- era concatenado ao prompt do sistema; o agente passava a tratar o que o visitante escrevera como ordem interna e enviava dados para fora. No Salesforce Agentforce, um formulário público de captura de leads fazia o mesmo: quando um analista pedia ao agente para examinar aquele lead, ele consultava os registros do CRM e despachava o conteúdo por e-mail. Um desses problemas recebeu CVE de alta severidade; o outro, considerado crítico, sequer chegou a ser catalogado.
+
+Um mês antes, pesquisadores ligados à Johns Hopkins e o pesquisador Aonan Guan tinham voltado as costas à infraestrutura clássica de comando e controle. Em vez de servidor externo, usavam comentários no GitHub como canal. Títulos de pull requests, corpos de issues e comentários escondidos em HTML --- invisíveis na renderização do Markdown --- escravizavam Claude Code Security Review, Gemini CLI Action e o agente do GitHub Copilot. Chaves de API, tokens do GitHub e segredos do ambiente de execução saíam de dentro do próprio repositório. Guan brincou chamando a técnica de ``comment and control''. A Anthropic pagou cem dólares, o GitHub quinhentos, e nenhum dos três emitiu aviso público ou CVE. A documentação da Anthropic, isso sim, ganhou um aviso discreto: aquela ação não é resistente a injeção e só deve revisar PRs confiáveis.
+
+Em agosto do mesmo ano, a Varonis apresentou o que chamou de CoSnitch contra o Copilot pessoal da Microsoft. A façanha teve um componente curioso: os pesquisadores não engenharam o exploit de trás para frente. Perguntavam ao próprio assistente como fazer para disparar um prompt sem intervenção humana, insistentemente, como quem questiona por que algo não funcionaria. O modelo explicou seu próprio tratamento de parâmetros de URL com detalhes técnicos --- inclusive o parâmetro que a Microsoft havia desativado silenciosamente. Testaram a explicação. Funcionou. Uma URL com dois parâmetros bastava para abrir o Copilot na sessão autenticada da vítima, executar a instrução sem que nada aparecesse na tela, alcançar mensagens, e-mails, aplicativos conectados e a memória persistente do assistente. A Microsoft planejava corrigir e atribuir CVE em 18 de agosto.
+
+\section{O que os dados do Google dizem --- e o que eles não dizem}
+
+Nem tudo é filme de espionagem. Em abril de 2026, a equipe de inteligência de ameaças do Google foi caçar injeções no mundo real. Varreu os instantâneos mensais do Common Crawl, que cobrem de dois a três bilhões de páginas, usando primeiro uma busca por assinaturas conhecidas, depois uma classificação feita pelo próprio Gemini para separar piada de intenção, e por fim revisão humana.
+
+Achou de tudo: brincadeiras que mandavam o assistente falar como passarinho, donos de site pedindo resumos mais justos, truques de posicionamento para que a IA elogiasse determinada empresa, instruções para afugentar robôs --- inclusive uma que redirecionava o agente para uma página de texto infinito, só para gastar recursos e estourar o tempo limite. Havia também tentativas de roubo de dados e ordens para apagar arquivos da máquina. A sofisticação, porém, era baixa. Os pesquisadores não encontraram uma produção em escala das técnicas mais avançadas publicadas no ano anterior.
+
+Mas o gráfico inclinava: aumento relativo de 32\% na categoria maliciosa entre novembro de 2025 e fevereiro de 2026. E a amostra era cega para redes sociais, que ficaram de fora por limitações do arquivo. A conclusão deles soou menos como alarme e mais como previsão de custo: agentes ficaram mais capazes, logo mais valiosos como alvo; ao mesmo tempo, os próprios atacantes começaram a automatizar operações com agentes, barateando o ataque. As duas curvas se aproximando são o problema.
+
+\section{Por que dói mais nas grandes}
+
+Para uma startup, uma injeção bem-sucedida é constrangedora. Para uma big tech, é multiplicada por quatro frentes.
+
+A primeira é exposição de dados em escala. Copilot, Gemini, Agentforce e companhia não leem apenas o que o usuário digitou: leem e-mail, agenda, drive, CRM, repositórios, histórico de conversa. O dano potencial é a união de tudo que a conta alcança, não o conteúdo de uma tela.
+
+A segunda é credibilidade corporativa. Empresas compraram assistentes prometendo produtividade com governança. Cada relatório como ShareLeak ou EchoLeak obriga o fornecedor a responder não só ao pesquisador, mas ao cliente que assinou o contrato, ao auditor e ao conselho. Curiosamente, a resposta tem sido assimétrica: bounties pagos em silêncio, documentações alteradas sem CVE, patches aplicados sem barulho. Isso protege o ciclo de lançamento, mas corrói a confiança de quem precisa decidir se libera o agente para os funcionários.
+
+A terceira é econômica, e menos discutida. SEO venenoso é uma forma de poluir a resposta. Se um site consegue convencer um assistente de que aquela marca é a melhor opção, ele está competindo não por posição na busca, mas pela própria síntese que a plataforma entrega. Para negócios construídos em cima de busca e resposta, isso ataca o produto central. Junto com isso vem o custo de defesa: classificadores, isolamento de contexto, monitoramento de desvio de rota, testes adversariais contínuos --- tudo rodando sobre tráfego global.
+
+A quarta é regulatória. Quando um agente envia um e-mail ou cria um evento usando permissões do usuário, quem é o responsável: o modelo, o aplicativo, o integrador ou a empresa contratante? A resposta ainda é jurídica em construção, e nenhuma big tech quer ser o exemplo que define a doutrina.
+
+\section{Defesa sem ilusão de cura}
+
+A Microsoft, que reconheceu a injeção indireta como a técnica mais comum entre as vulnerabilidades de IA reportadas a ela, adotou uma postura de camadas: prompts de sistema mais duros, marcação e isolamento de conteúdo externo --- a chamada \emph{spotlighting} ---, detectores como os Prompt Shields integrados ao Defender for Cloud, análise de cadeias de ferramentas e, no fim, supervisão humana para ações sensíveis. Documentação mais recente ainda fala em controle de fluxo de informação com metadados, credenciais de curta duração e agentes-críticos que auditam outros agentes.
+
+A comunidade de pesquisa tem sido igualmente clara sobre o que não funciona. Filtrar palavras-chave pega o ataque ingênuo e perde o resto. Rotular um trecho como ``não confiável'' dentro do próprio prompt é decorar a porta, não trancá-la. A OWASP insiste que a decisão sobre chamar uma ferramenta precisa ficar no código que a envolve, com argumentos validados e permissões do chamador, não na boa vontade do modelo. A saída, do mesmo jeito, deve ser tratada como entrada suspeita por qualquer destino --- renderização HTML, query, outro agente.
+
+A medida mais eficaz é a mais chata: dar ao agente apenas o que ele precisa, pelo menor tempo possível. Um assistente que não pode enviar e-mail nunca será convencido a enviar e-mail, por mais convincente que seja o texto que ele leu. O Centro para Tecnologias Emergentes e Segurança, da Alan Turing Institute, resumiu o lado operacional em janeiro de 2026 com recomendações nada glamourosas: higiene de dados --- e-mails não lidos não deveriam alimentar o índice de recuperação ---, avaliação antes do deploy com um banco vivo de ataques em formatos variados, treinamento de usuários e barreiras técnicas.
+
+\section{O que fica}
+
+Há uma tentação grande em tratar injeção de prompt como o equivalente bobinho de XSS: escreveu errado, escapou, acabou. Não é. XSS nasceu de uma confusão entre dado e código que a engenharia web levou anos para contornar com escaping, CSP e frameworks seguros por padrão. Aqui a confusão está no próprio raciocínio do componente que decidiu o que fazer. Não há sanitizador que resolva a ambiguidade sem antes decidir, fora do modelo, quem manda.
+
+As big techs sabem disso. É por isso que os avisos em documentação são discretos, os CVEs nem sempre aparecem e os bounties são baixos perto do dano demonstrado. Elas estão comprando tempo enquanto reescrevem a arquitetura por baixo --- separando contextos, destruindo privilégios, observando desvios em tempo real. O tempo, aliás, está acabando: o mesmo agente que barateia a defesa também barateia o ataque.
+
+O convite de calendário já foi enviado. A pergunta ingênua já foi feita. O resto é engenharia de permissão.
+
+\section*{Referências consultadas}
+
+\noindent Texto integralmente reescrito, sem trechos reproduzidos das fontes abaixo.
+
+\begin{itemize}
+  \item OWASP Gen AI Security Project --- \url{https://genai.owasp.org/llm-top-10/2025/llm01-prompt-injection} e \url{https://cheatsheetseries.owasp.org/cheatsheets/LLM_Prompt_Injection_Prevention_Cheat_Sheet.html}
+  \item Google Security Blog --- \url{https://blog.google/security/prompt-injections-web/} (23/04/2026)
+  \item Microsoft Security Response Center --- \url{https://msrc.microsoft.com/blog/2025/07/how-microsoft-defends-against-indirect-prompt-injection-attacks/} (29/07/2025) e \url{https://learn.microsoft.com/en-us/security/zero-trust/sfi/defend-indirect-prompt-injection}
+  \item The Hacker News / SiliconANGLE --- \url{https://thehackernews.com/2026/01/google-gemini-prompt-injection-flaw.html} (19/01/2026)
+  \item CyberScoop --- \url{https://cyberscoop.com/google-gemini-cli-prompt-injection-arbitrary-code-execution/} (28/07/2025)
+  \item CSO Online --- \url{https://www.csoonline.com/article/4159079/copilot-and-agentforce-fall-to-form-based-prompt-injection-tricks.html} (15/04/2026)
+  \item The Register --- \url{https://www.theregister.com/2026/04/15/claude_gemini_copilot_agents_hijacked/} e \url{https://www.theregister.com/research/2026/08/18/copilot-tricked-into-telling-reseachers-how-to-hack-itself/5288857}
+  \item AAAI Symposium Series --- \url{https://ojs.aaai.org/index.php/AAAI-SS/article/view/36899}
+  \item Centre for Emerging Technology and Security (Alan Turing Institute) --- \url{https://cetas.turing.ac.uk/publications/indirect-prompt-injection-generative-ais-greatest-security-flaw}
+  \item Cloud Security Alliance --- \url{https://labs.cloudsecurityalliance.org/research/csa-research-note-indirect-prompt-injection-in-the-wild-2026} (26/04/2026)
+\end{itemize}
+
+\end{document}
